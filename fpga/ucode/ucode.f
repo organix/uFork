@@ -2414,6 +2414,15 @@ del_none:                   ; k orig key rev next value' key'
         zq_put ;            ( D: -- )
     THEN                    ( D: event sponsor )
 
+    ( check target )
+    OVER QX@ cap2ptr        ( D: event sponsor target )
+    DUP QZ@ IF              ( D: event sponsor target )
+        ( target is busy )
+        SWAP DROP           ( D: event target )
+        zq_put ;            ( D: -- )
+    THEN DROP               ( D: event sponsor )
+
+    ( consume quota )
     1 OVER consume_events   ( D: event sponsor error )
     DUP E_OK <> IF          ( D: event sponsor error )
         ( suspend sponsor )
@@ -2424,7 +2433,7 @@ del_none:                   ; k orig key rev next value' key'
     THEN                    ( D: event sponsor error )
     2DROP                   ( D: event )
 
-    ( check target )
+    ( synchronous device handler )
     DUP QX@ cap2ptr >R      ( D: event ) ( R: target )
     R@ QX@ is_fix IF        ( D: event ) ( R: target )
         ( target is device -- FIXME: handle PROXY_T )
@@ -2437,10 +2446,6 @@ del_none:                   ; k orig key rev next value' key'
         bounds_abort        ( 4: blob device )
         bounds_abort        ( 5: random device )
         1_bounds_abort ;    ( default case )
-    THEN
-    R@ QZ@ IF               ( D: event ) ( R: target )
-        ( target is busy )
-        R> zq_put ;         ( D: ) ( R: )
     THEN
 
     ( create txn effect )
