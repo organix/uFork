@@ -2318,6 +2318,7 @@ del_none:                   ; k orig key rev next value' key'
     THEN                    ( D: ctrl sp'' sponsor )
     DUP QZ@                 ( D: ctrl sp'' sponsor waiting )
     append_zq               ( D: ctrl sp'' sponsor )
+    #nil OVER qz!           ( D: ctrl sp'' sponsor )
     ROT OVER                ( D: sp'' sponsor ctrl sponsor )
     SWAP #nil               ( D: sp'' sponsor sponsor ctrl #nil )
     -ROT sponsor@           ( D: sp'' sponsor #nil sponsor ctrl my_spn )
