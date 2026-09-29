@@ -1591,7 +1591,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 
 : op_end ( -- ip' | error )
     imm@ #1 = IF
-        ep@ txn. CR ( log transaction )
+        ( ep@ txn. CR ) ( log transaction )
         effect@ DUP QZ@     ( D: effect outbox )
         append_zq           ( D: effect )
         ( update actor )
@@ -2404,7 +2404,7 @@ del_none:                   ; k orig key rev next value' key'
     raw. CR ;               ( D: -- )
 
 : dispatch_event ( -- )
-    '[' EMIT SPACE e_head@ events. ']' EMIT CR ( log event )
+    ( '[' EMIT SPACE e_head@ events. ']' EMIT CR ) ( log event )
     event_dequeue           ( D: event )
     ( check sponsor )
     DUP QT@                 ( D: event sponsor )
@@ -2456,7 +2456,7 @@ del_none:                   ; k orig key rev next value' key'
     OVER qz!                ( D: event ) ( R: target )
     #nil R> QX@             ( D: ep sp ip )
     2alloc                  ( D: cont )
-    DUP cont. CR ( log continuation )
+    ( DUP cont. CR ) ( log continuation )
     cont_enqueue ;
 
 : report_instr_cnt ( -- )
