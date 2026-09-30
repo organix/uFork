@@ -64,6 +64,10 @@ Stack and memory contents are displayed at all times.
 A simulated _Console I/O_ device is connected to
 controls on the page.
 
+A uFork program can be run within the uCode debugger launched from the
+[playground](https://github.com/organix/uFork/blob/main/apps/playground/README.md),
+as described in this [sample debugging session](./ufork_debugging.md).
+
 ## Word Definitions
 
 The following tables summarize the libarary of pre-defined words.
