@@ -540,9 +540,9 @@ VARIABLE xm_here            ( upload address )
     xm_flush_rcv
     NAK EMIT                ( send NAK to start or retry )
 : xm_rcv_soh
-    3000 xm_timed_rcv
+    3000 xm_timed_rcv       ( D: byte )
     DUP EOT = IF
-        ACK.
+        DROP ACK.
         xm_pkt @ ;          ( successful transfer )
     THEN
     SOH <> IF
@@ -2033,7 +2033,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 : dict_add                  ( D: )
     sp@ part >R             ( D: sp' ) ( R: value )
     part >R                 ( D: sp'' ) ( R: value key )
-    part R> R> SWAP         ( D: sp''' dict key ) ( R: value )
+    part R>                 ( D: sp''' dict key ) ( R: value )
     R> SWAP                 ( D: sp''' dict value key ) ( R: )
     #dict_t 3alloc          ( D: [#dict_t, key, value, dict] )
     push_result ;
