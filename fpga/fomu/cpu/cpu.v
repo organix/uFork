@@ -576,7 +576,7 @@ module cpu #(
         ( mem_rng == `MEM_GCC ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h1 ? { {(DATA_SZ-8){usb_rdata[7]}}, usb_rdata }
-        : mem_rng == `MEM_DEV && dev_id == 4'h2 ? { 6'b000000, rtc_rdata }
+        : mem_rng == `MEM_DEV && dev_id == 4'h2 ? rtc_rdata
         : mem_rng == `MEM_DEV && dev_id == 4'hE ? ( reg_id == 4'h0 ? instr_cnt : 0 )
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata
@@ -637,7 +637,7 @@ module cpu #(
 
     wire rtc_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h2);
     wire [3:0] rtc_addr = reg_id;
-    wire [9:0] rtc_rdata;
+    wire [15:0] rtc_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin

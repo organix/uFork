@@ -174,10 +174,7 @@ function make_machine(prog = [], device = []) {
         read(reg) {
             const t = Date.now();
             if (reg === 0x0) {  // ms
-                return (t % 1000) & 0xFFFF;
-            }
-            if (reg === 0xF) {  // s
-                return ((t / 1000) % 1000) & 0xFFFF;
+                return t & 0xFFFF;
             }
             return 0;  // infallible read
         },
@@ -187,7 +184,7 @@ function make_machine(prog = [], device = []) {
             // write ignored
         }
     });
-    device[0x2] = rtc;  // install CPU performance device
+    device[0x2] = rtc;  // install real-time clock device
 
     const perf = Object.freeze({  // CPU performance device
         read(reg) {
