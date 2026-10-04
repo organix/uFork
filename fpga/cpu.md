@@ -236,6 +236,12 @@ in a single CPU-instruction cycle.
     * `12`: RX?
     * `13`: RX@
 
+  * `2x`: Console UART
+    * `20`: MS@
+    * `21`: US@
+    * `2E`: KS@
+    * `2F`: S@
+
   * `Fx`: SPI Flash Memory
     * `F0`: CS!
     * `F1`: DO!

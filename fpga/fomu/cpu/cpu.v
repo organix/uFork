@@ -47,6 +47,7 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "../lib/fifo.v" // required by `uart.v` and `usb_uart.v`
 `include "uart.v"
 `include "usb_uart.v"
+`include "rtc.v"
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
@@ -483,6 +484,23 @@ module cpu #(
     );
 
     //
+    // RTC device
+    //
+
+    rtc #(
+        .CLK_FREQ(CLK_FREQ)
+    ) RTC (
+        .i_clk(i_clk),
+
+        .i_en(rtc_en),
+        .i_wr(1'b0),
+        .i_addr(rtc_addr),
+//        .i_data(rtc_wdata),
+
+        .o_data(rtc_rdata)
+    );
+
+    //
     // uCode execution engine
     //
 
@@ -558,6 +576,7 @@ module cpu #(
         ( mem_rng == `MEM_GCC ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h1 ? { {(DATA_SZ-8){usb_rdata[7]}}, usb_rdata }
+        : mem_rng == `MEM_DEV && dev_id == 4'h2 ? { 6'b000000, rtc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'hE ? ( reg_id == 4'h0 ? instr_cnt : 0 )
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata
@@ -615,6 +634,10 @@ module cpu #(
     wire [3:0] usb_addr = reg_id;
     wire [7:0] usb_wdata = nos[7:0];
     wire [7:0] usb_rdata;
+
+    wire rtc_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h2);
+    wire [3:0] rtc_addr = reg_id;
+    wire [9:0] rtc_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin

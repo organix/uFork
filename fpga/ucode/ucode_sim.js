@@ -170,6 +170,25 @@ function make_machine(prog = [], device = []) {
         return err;
     }
 
+    const rtc = Object.freeze({  // real-time clock device
+        read(reg) {
+            const t = Date.now();
+            if (reg === 0x0) {  // ms
+                return (t % 1000) & 0xFFFF;
+            }
+            if (reg === 0xF) {  // s
+                return ((t / 1000) % 1000) & 0xFFFF;
+            }
+            return 0;  // infallible read
+        },
+        write(reg, data) {
+            reg = data;
+            data = reg;
+            // write ignored
+        }
+    });
+    device[0x2] = rtc;  // install CPU performance device
+
     const perf = Object.freeze({  // CPU performance device
         read(reg) {
             if (reg === 0x0) {

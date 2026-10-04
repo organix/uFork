@@ -51,7 +51,7 @@ module rtc #(
 
     // count-up timer to report microseconds (us)
     reg [9:0] us_ticks = 0;
-    wire ms_stb = (us_ticks == 999)
+    wire ms_stb = (us_ticks == 999);
     always @(posedge i_clk) begin
         if (us_stb) begin
             if (ms_stb) begin
@@ -64,7 +64,7 @@ module rtc #(
 
     // count-up timer to report milliseconds (ms)
     reg [9:0] ms_ticks = 0;
-    wire s_stb = (ms_ticks == 999)
+    wire s_stb = (ms_ticks == 999);
     always @(posedge i_clk) begin
         if (ms_stb) begin
             if (s_stb) begin
@@ -77,7 +77,7 @@ module rtc #(
 
     // count-up timer to report seconds (s)
     reg [9:0] s_ticks = 0;
-    wire ks_stb = (s_ticks == 999)
+    wire ks_stb = (s_ticks == 999);
     always @(posedge i_clk) begin
         if (s_stb) begin
             if (ks_stb) begin
