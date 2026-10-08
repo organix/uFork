@@ -2369,16 +2369,27 @@ del_none:                   ; k orig key rev next value' key'
     QY@                     ( D: message )
     raw. CR ;               ( D: -- )
 
+: RTC@                      ( -- ms )
+    0x20 IO@ ;
 : clock_dev                 ( event -- )
     DUP QT@                 ( D: event spn )
     SWAP QY@                ( D: spn cust=message )
-    0x20 IO@                ( D: spn cust ms )
-    int2fix                 ( D: spn cust #ms )
-    SWAP                    ( D: spn msg=#ms target=cust )
+    RTC@                    ( D: spn cust msg=ms )
+: post_fix                  ( D: spn cust msg )
+    int2fix                 ( D: spn cust msg=#msg )
+    SWAP                    ( D: spn msg target=cust )
 : post_msg                  ( sponsor msg target -- )
     ROT                     ( D: msg target sponsor )
     2alloc                  ( D: event' )
     event_enqueue ;
+
+: PRNG@                     ( -- prng )
+    0x30 IO@ ;
+: prng_dev                  ( event -- )
+    DUP QT@                 ( D: event spn )
+    SWAP QY@                ( D: spn cust=message )
+    PRNG@                   ( D: spn cust msg=prng )
+    post_fix ;
 
 : dispatch_event ( -- )
     ( '[' EMIT SPACE e_head@ events. ']' EMIT CR ) ( log event )
@@ -2421,7 +2432,7 @@ del_none:                   ; k orig key rev next value' key'
         bounds_abort        ( 2: timer device )
         bounds_abort        ( 3: i/o device )
         bounds_abort        ( 4: blob device )
-        bounds_abort        ( 5: random device )
+        prng_dev            ( 5: random device )
         1_bounds_abort ;    ( default case )
     THEN
 
@@ -2576,6 +2587,28 @@ VARIABLE saved_sp           ( sp before instruction execution )
     prompt MONITOR
     ufork_boot ;
 
+: prng_hist DATA
+0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( 0..3 )
+0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( 4..7 )
+0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( 8..B )
+0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( C..F )
+: prng_test
+    256 ?LOOP-
+        256 ?LOOP-
+            PRNG@
+            DUP 0xF AND prng_hist + @1+
+            ( X. SPACE ) DROP
+        AGAIN ( CR )
+        ( '.' EMIT )
+    AGAIN CR
+    16 ?LOOP-
+        prng_hist I + @     ( D: hist[i] )
+        DUP X. SPACE
+        4ASR 2ASR ?LOOP-
+            '-' EMIT
+        AGAIN CR
+    AGAIN
+    EXIT
 (   --- disable test suite ---
 : ufork_init_test
     mem_free@ ( 0 int2fix ) #0 =assert
@@ -2644,6 +2677,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     spi_wake DROP
     10 us_delay             ( wake-up delay > 5us )
     ECHOLOOP
+    prng_test               ( show PRNG histogram )
     ufork_init
     (
     test_suite

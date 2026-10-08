@@ -48,6 +48,7 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "uart.v"
 `include "usb_uart.v"
 `include "rtc.v"
+`include "prng.v"
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
@@ -501,6 +502,21 @@ module cpu #(
     );
 
     //
+    // PRNG device
+    //
+
+    prng PRNG (
+        .i_clk(i_clk),
+
+        .i_en(prng_en),
+        .i_wr(1'b0),
+        .i_addr(prng_addr),
+//        .i_data(prng_wdata),
+
+        .o_data(prng_rdata)
+    );
+
+    //
     // uCode execution engine
     //
 
@@ -577,6 +593,7 @@ module cpu #(
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h1 ? { {(DATA_SZ-8){usb_rdata[7]}}, usb_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h2 ? rtc_rdata
+        : mem_rng == `MEM_DEV && dev_id == 4'h3 ? prng_rdata
         : mem_rng == `MEM_DEV && dev_id == 4'hE ? ( reg_id == 4'h0 ? instr_cnt : 0 )
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata
@@ -638,6 +655,10 @@ module cpu #(
     wire rtc_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h2);
     wire [3:0] rtc_addr = reg_id;
     wire [15:0] rtc_rdata;
+
+    wire prng_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h3);
+    wire [3:0] prng_addr = reg_id;
+    wire [15:0] prng_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin

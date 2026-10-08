@@ -236,8 +236,11 @@ in a single CPU-instruction cycle.
     * `12`: RX?
     * `13`: RX@
 
-  * `2x`: Real-time Clock
+  * `2x`: Real-Time Clock
     * `20`: MS@
+
+  * `3x`: Pseudo-Random Number Generator
+    * `30`: PRNG@
 
   * `Fx`: SPI Flash Memory
     * `F0`: CS!
