@@ -55,15 +55,12 @@ module rtc #(
     reg [15:0] ms_ticks = 0;
 
     always @(posedge i_clk) begin
-        if (i_en && !i_wr) begin
-            if (i_addr == RTC_MS) begin
-                o_data <= ms_ticks;
-            end
-        end else if (i_en && i_wr) begin
-            if (i_addr == RTC_MS) begin
-                ms_ticks <= i_data;
-            end
-        end else begin
+        if (i_en && !i_wr && (i_addr == RTC_MS)) begin
+            o_data <= ms_ticks;
+        end
+        if (i_en && i_wr && (i_addr == RTC_MS)) begin
+            ms_ticks <= i_data;
+        end else if (ms_stb) begin
             ms_ticks <= ms_ticks + 1'b1;
         end
     end

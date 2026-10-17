@@ -47,8 +47,7 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "../lib/fifo.v" // required by `uart.v` and `usb_uart.v`
 `include "uart.v"
 `include "usb_uart.v"
-`include "rtc.v"
-`include "prng.v"
+`include "sys.v"
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
@@ -485,35 +484,20 @@ module cpu #(
     );
 
     //
-    // RTC device
+    // system device
     //
 
-    rtc #(
+    sys #(
         .CLK_FREQ(CLK_FREQ)
-    ) RTC (
+    ) SYS (
         .i_clk(i_clk),
 
-        .i_en(rtc_en),
-        .i_wr(1'b0),
-        .i_addr(rtc_addr),
-//        .i_data(rtc_wdata),
+        .i_en(sys_en),
+        .i_wr(sys_wr),
+        .i_addr(sys_addr),
+        .i_data(sys_wdata),
 
-        .o_data(rtc_rdata)
-    );
-
-    //
-    // PRNG device
-    //
-
-    prng PRNG (
-        .i_clk(i_clk),
-
-        .i_en(prng_en),
-        .i_wr(1'b0),
-        .i_addr(prng_addr),
-//        .i_data(prng_wdata),
-
-        .o_data(prng_rdata)
+        .o_data(sys_rdata)
     );
 
     //
@@ -532,7 +516,6 @@ module cpu #(
 
     reg [ADDR_SZ-1:0] pc = 0;                           // program counter
     wire [ADDR_SZ-1:0] pc_plus_1 = pc + 1'b1;           // program counter incremented
-    reg [DATA_SZ-1:0] instr_cnt = 0;                    // instruction counter
     reg [DATA_SZ-1:0] instr_r = UC_NOP;
     wire [DATA_SZ-1:0] instr =                          // current instruction
         ( p_alu ? uc_rdata
@@ -592,9 +575,7 @@ module cpu #(
         ( mem_rng == `MEM_GCC ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h1 ? { {(DATA_SZ-8){usb_rdata[7]}}, usb_rdata }
-        : mem_rng == `MEM_DEV && dev_id == 4'h2 ? rtc_rdata
-        : mem_rng == `MEM_DEV && dev_id == 4'h3 ? prng_rdata
-        : mem_rng == `MEM_DEV && dev_id == 4'hE ? ( reg_id == 4'h0 ? instr_cnt : 0 )
+        : mem_rng == `MEM_DEV && dev_id == 4'hE ? sys_rdata
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata
         : uc_rdata );
@@ -634,12 +615,6 @@ module cpu #(
     wire [15:0] quad_wdata = nos;
     wire [15:0] quad_rdata;
 
-    wire flash_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'hF);
-    wire flash_wr = mem_wr;
-    wire [3:0] flash_addr = reg_id;
-    wire [7:0] flash_wdata = nos[7:0];
-    wire [7:0] flash_rdata;
-
     wire uart_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h0);
     wire uart_wr = mem_wr;
     wire [3:0] uart_addr = reg_id;
@@ -652,13 +627,17 @@ module cpu #(
     wire [7:0] usb_wdata = nos[7:0];
     wire [7:0] usb_rdata;
 
-    wire rtc_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h2);
-    wire [3:0] rtc_addr = reg_id;
-    wire [15:0] rtc_rdata;
+    wire sys_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'hE);
+    wire sys_wr = mem_wr;
+    wire [3:0] sys_addr = reg_id;
+    wire [15:0] sys_wdata = nos[15:0];
+    wire [15:0] sys_rdata;
 
-    wire prng_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h3);
-    wire [3:0] prng_addr = reg_id;
-    wire [15:0] prng_rdata;
+    wire flash_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'hF);
+    wire flash_wr = mem_wr;
+    wire [3:0] flash_addr = reg_id;
+    wire [7:0] flash_wdata = nos[7:0];
+    wire [7:0] flash_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin
@@ -674,7 +653,6 @@ module cpu #(
             end else if (ctrl && branch) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
             end
-            instr_cnt <= instr_cnt + 1'b1;
             instr_r <= uc_rdata;
             p_alu <= !p_alu;
         end else if (o_running) begin

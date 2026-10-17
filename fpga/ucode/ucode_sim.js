@@ -170,67 +170,54 @@ function make_machine(prog = [], device = []) {
         return err;
     }
 
-    const rtc = Object.freeze({  // real-time clock device
-        read(reg) {
-            const t = Date.now();
-            if (reg === 0x0) {  // ms
-                return t & 0xFFFF;
-            }
-            return 0;  // infallible read
-        },
-        write(reg, data) {
-            reg = data;
-            data = reg;
-            // write ignored
-        }
-    });
-    device[0x2] = rtc;  // install real-time clock device
+    function make_sys() {
+        const SYS_INSTR = 0x0;  // instruction counter
+        const SYS_MS = 0x8;  // RTC milliseconds (10^-3)
+        const SYS_PRNG = 0xF;  // pseudo-random number
 
-    const PRNG_SEED = 0xCA187A0C;
-    let prng_w = PRNG_SEED;
-    let prng_x = PRNG_SEED;
-    let prng_y = PRNG_SEED;
-    let prng_z = PRNG_SEED;
-    function prng_shift(prng_s) {
-        prng_w = prng_x;
-        prng_x = prng_y;
-        prng_y = prng_z;
-        prng_z = prng_s & 0xFFFFFFFF;
+        const PRNG_SEED = 0xCA187A0C;
+        let prng_w = PRNG_SEED;
+        let prng_x = PRNG_SEED;
+        let prng_y = PRNG_SEED;
+        let prng_z = PRNG_SEED;
+
+        function prng_shift(prng_s) {
+            prng_w = prng_x;
+            prng_x = prng_y;
+            prng_y = prng_z;
+            prng_z = prng_s & 0xFFFFFFFF;
+        }
+
+        return Object.freeze({
+            read(reg) {
+                if (reg === SYS_INSTR) {
+                    return instr_cnt;
+                }
+                if (reg === SYS_MS) {
+                    const t = Date.now();
+                    return t & 0xFFFF;
+                }
+                if (reg === SYS_PRNG) {
+                    const prng_r = prng_z & 0xFFFF;
+                    let prng_t = prng_w ^ (prng_w << 11);
+                    prng_shift(prng_z ^ (prng_z >> 19) ^ prng_t ^ (prng_t >> 8));
+                    return prng_r;
+                }
+                return 0;  // infallible read
+            },
+            write(reg, data) {
+                if (reg === SYS_PRNG) {
+                    prng_shift((data & 0xFFFF) ^ PRNG_SEED);
+                }
+                // ignore unknown writes
+            },
+            SYS_INSTR,
+            SYS_MS,
+            SYS_PRNG
+        });
+
     }
-    const prng = Object.freeze({  // pseudo-random number generator
-        read(reg) {
-            if (reg === 0x0) {  // prng_16
-                const prng_r = prng_z & 0xFFFF;
-                let prng_t = prng_w ^ (prng_w << 11);
-                prng_shift(prng_z ^ (prng_z >> 19) ^ prng_t ^ (prng_t >> 8));
-                return prng_r;
-            }
-            return 0;  // infallible read
-        },
-        write(reg, data) {
-            if (reg === 0x0) {  // prng_16
-                prng_shift((data & 0xFFFF) ^ PRNG_SEED);
-            }
-            // write ignored
-        }
-    });
-    device[0x3] = prng;  // install pseudo-random number generator
-
-    const perf = Object.freeze({  // CPU performance device
-        read(reg) {
-            if (reg === 0x0) {
-                return instr_cnt;
-            }
-            return 0;  // infallible read
-        },
-        write(reg, data) {
-            if (reg === 0x0) {
-                instr_cnt = data & 0xFFFF;
-            }
-            // write ignored
-        }
-    });
-    device[0xE] = perf;  // install CPU performance device
+    device[0xE] = make_sys();  // install system device
 
     function alu_perform(op, a, b) {
         if (import.meta.main) {
