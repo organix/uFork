@@ -47,6 +47,11 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "../lib/fifo.v" // required by `uart.v` and `usb_uart.v`
 `include "uart.v"
 `include "usb_uart.v"
+`ifdef __ICARUS__
+`include "blob_mem.v"
+`else
+`include "blob_spram.v"
+`endif
 `include "sys.v"
 
 // Memory Ranges
@@ -484,6 +489,21 @@ module cpu #(
     );
 
     //
+    // blob device
+    //
+
+    blob BLOB (
+        .i_clk(i_clk),
+
+        .i_en(blob_en),
+        .i_wr(blob_wr),
+        .i_addr(blob_addr),
+        .i_data(blob_wdata),
+
+        .o_data(blob_rdata)
+    );
+
+    //
     // system device
     //
 
@@ -575,6 +595,7 @@ module cpu #(
         ( mem_rng == `MEM_GCC ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h1 ? { {(DATA_SZ-8){usb_rdata[7]}}, usb_rdata }
+        : mem_rng == `MEM_DEV && dev_id == 4'h2 ? blob_rdata
         : mem_rng == `MEM_DEV && dev_id == 4'hE ? sys_rdata
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata
@@ -626,6 +647,12 @@ module cpu #(
     wire [3:0] usb_addr = reg_id;
     wire [7:0] usb_wdata = nos[7:0];
     wire [7:0] usb_rdata;
+
+    wire blob_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h2);
+    wire blob_wr = mem_wr;
+    wire [3:0] blob_addr = reg_id;
+    wire [15:0] blob_wdata = nos[15:0];
+    wire [15:0] blob_rdata;
 
     wire sys_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'hE);
     wire sys_wr = mem_wr;

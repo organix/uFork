@@ -2618,6 +2618,48 @@ VARIABLE saved_sp           ( sp before instruction execution )
     800 us_delay
     report_rtc_ms
     EXIT
+
+(
+: b2c ( msb lsb -- cell )
+    8LSB&
+    SWAP 8LSB& 8ROL
+    OR ;
+: c2b ( cell -- msb lsb )
+    DUP 8ROL 8LSB&
+    SWAP 8LSB& ;
+
+: CS! ( bool -- )
+    0xF0 IO! ;              ( assert chip-select )
+: DO! ( byte -- )
+    0xF1 IO! ;              ( send data byte )
+: DR? ( -- bool )
+    0xF2 IO@ ;              ( data ready/done )
+: DI@ ( -- byte )
+    0xF3 IO@ ;              ( last byte received )
+: WAIT_DR ( -- )
+    BEGIN DR? UNTIL ;       ( wait until ready/done )
+
+: spi_out ( byte -- )
+    WAIT_DR DO! ;
+: spi_in ( -- byte )
+    -1 spi_out              ( send dummy byte )
+    WAIT_DR DI@ ;
+)
+: blob_test
+    0x0000 0x22 IO!         ( WADDR! )
+    0xA55A 0x23 IO!         ( WDATA! )
+    0x3FFF 0x22 IO!         ( WADDR! )
+    0x5AA5 0x23 IO!         ( WDATA! )
+    0x0000 0x20 IO!         ( RADDR! )
+    0x21 IO@ X. SPACE       ( RDATA@ )
+    0x3FFF 0x20 IO!         ( RADDR! )
+    0x21 IO@ X. SPACE       ( RDATA@ )
+    0xC000 0x22 IO!         ( WADDR! )
+    0xC0DE 0x23 IO!         ( WDATA! )
+    0x0000 0x20 IO!         ( RADDR! )
+    0x21 IO@ X. SPACE       ( RDATA@ )
+    CR ;
+
 (   --- disable test suite ---
 : ufork_init_test
     mem_free@ ( 0 int2fix ) #0 =assert
@@ -2686,7 +2728,10 @@ VARIABLE saved_sp           ( sp before instruction execution )
     spi_wake DROP
     10 us_delay             ( wake-up delay > 5us )
     ECHOLOOP
+    blob_test
+    (
     prng_test               ( show PRNG histogram )
+    )
     ufork_init
     (
     test_suite

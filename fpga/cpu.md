@@ -236,6 +236,12 @@ in a single CPU-instruction cycle.
     * `12`: RX?
     * `13`: RX@
 
+  * `2x`: BLOB Device
+    * `20`: RADDR!
+    * `21`: RDATA@
+    * `22`: WADDR!
+    * `23`: WDATA!
+
   * `Ex`: System Device
     * `E0`: I_CNT@
     * `E8`: RTC_MS@
