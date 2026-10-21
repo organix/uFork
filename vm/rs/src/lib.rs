@@ -42,8 +42,14 @@ pub const MUT_RAW: Raw          = 0x4000_0000;  // 1=read-write (mutable), 0=rea
 pub const OPQ_RAW: Raw          = 0x2000_0000;  // 1=opaque (capability), 0=transparent (navigable)
 
 // abstract device interface
-pub trait Device {
+//
+// `Device` is parameterized on the `Core`'s backing store so that a device
+// can be installed into any `Core<S>`.  Existing `impl Device for MyDev`
+// blocks continue to compile for `Core<DenseQuadStorage>` thanks to the
+// default type parameter; devices that want to work with any backend can
+// write `impl<S: QuadStorage> Device<S> for MyDev` instead.
+pub trait Device<S: QuadStorage = DenseQuadStorage> {
     fn init(&mut self) {}  // runtime initialization, default: no-op
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error>;
-    fn drop_proxy(&mut self, _core: &mut Core, _cap: Any) {}  // default: no-op
+    fn handle_event(&mut self, core: &mut Core<S>, ep: Any) -> Result<Any, Error>;
+    fn drop_proxy(&mut self, _core: &mut Core<S>, _cap: Any) {}  // default: no-op
 }

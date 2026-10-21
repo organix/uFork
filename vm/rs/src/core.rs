@@ -39,7 +39,7 @@ enum GcPhase {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum GcColor {
+pub enum GcColor {
     Free,
     GenX,
     GenY,
@@ -53,43 +53,90 @@ const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
 //const QUAD_ROM_MAX: usize = 1<<14;  // 16K quad-cells of ROM
 //const QUAD_RAM_MAX: usize = 1<<8;  // 256 quad-cells of RAM
 //const QUAD_RAM_MAX: usize = 1<<10;  // 1K quad-cells of RAM
-const QUAD_RAM_MAX: usize = 1<<12;  // 4K quad-cells of RAM (FPGA size)
+pub const QUAD_RAM_MAX: usize = 1<<12;  // 4K quad-cells of RAM (FPGA size)
 const DEVICE_MAX: usize = 12;  // number of Core devices
 
-pub struct Core {
+// Pluggable backing store for RAM quads and their GC marks.
+//
+// `Core` is parameterized on `QuadStorage` so that downstream crates can
+// swap the default dense array for sparse, paged, memory-mapped, or
+// otherwise instrumented backing stores without forking core.rs.  Offsets
+// correspond directly to the 28-bit address field of `Raw` (i.e. the full
+// theoretical capacity of a `QuadStorage` is 2^28 cells).
+pub trait QuadStorage {
+    fn capacity(&self) -> usize;
+    fn get(&self, ofs: usize) -> &Quad;
+    fn get_mut(&mut self, ofs: usize) -> &mut Quad;
+    fn set(&mut self, ofs: usize, quad: Quad);
+    fn get_mark(&self, ofs: usize) -> GcColor;
+    fn set_mark(&mut self, ofs: usize, color: GcColor);
+    // Default returns an empty slice; sparse/paged impls that cannot
+    // present contiguous storage inherit this behavior.
+    fn as_slice(&self) -> &[Quad] { &[] }
+}
+
+// The default dense backing store: a fixed-size array of quads plus a
+// parallel array of GC marks.  Behavior matches pre-trait upstream.
+pub struct DenseQuadStorage {
+    quads: [Quad; QUAD_RAM_MAX],
+    marks: [GcColor; QUAD_RAM_MAX],
+}
+
+impl DenseQuadStorage {
+    pub const fn new() -> Self {
+        Self {
+            quads: [Quad::empty_t(); QUAD_RAM_MAX],
+            marks: [GcColor::Free; QUAD_RAM_MAX],
+        }
+    }
+}
+
+impl Default for DenseQuadStorage {
+    fn default() -> Self { Self::new() }
+}
+
+impl QuadStorage for DenseQuadStorage {
+    fn capacity(&self) -> usize { QUAD_RAM_MAX }
+    fn get(&self, ofs: usize) -> &Quad { &self.quads[ofs] }
+    fn get_mut(&mut self, ofs: usize) -> &mut Quad { &mut self.quads[ofs] }
+    fn set(&mut self, ofs: usize, quad: Quad) { self.quads[ofs] = quad; }
+    fn get_mark(&self, ofs: usize) -> GcColor { self.marks[ofs] }
+    fn set_mark(&mut self, ofs: usize, color: GcColor) { self.marks[ofs] = color; }
+    fn as_slice(&self) -> &[Quad] { &self.quads }
+}
+
+pub struct Core<S: QuadStorage = DenseQuadStorage> {
     quad_rom:   [Quad; QUAD_ROM_MAX],
-    quad_ram:   [Quad; QUAD_RAM_MAX],
+    storage:    S,
     rom_top:    Any,
     gc_addr:    Any,
     gc_stride:  u8,
     gc_phase:   GcPhase,
     gc_curr:    GcColor,
     gc_prev:    GcColor,
-    gc_marks:   [GcColor; QUAD_RAM_MAX],
-    device:     [Option<Box<dyn Device>>; DEVICE_MAX],
+    device:     [Option<Box<dyn Device<S>>>; DEVICE_MAX],
     txn_fn:     Option<Box<dyn Fn(Any, Any)>>,
     audit_fn:   Option<Box<dyn Fn(Any, Any)>>,
     audit_err:  Option<Error>,
 }
 
-impl Default for Core {
+impl Default for Core<DenseQuadStorage> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Core {
+impl Core<DenseQuadStorage> {
     pub const fn new() -> Self {
         Core {
             quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
-            quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
+            storage: DenseQuadStorage::new(),
             rom_top: Any::rom(ROM_BASE_OFS),
             gc_addr: Any::ram(RAM_BASE_OFS),
             gc_stride: 32,
             gc_phase: GcPhase::Idle,
             gc_curr: GcColor::GenX,
             gc_prev: GcColor::GenY,
-            gc_marks: [ GcColor::Free; QUAD_RAM_MAX ],
             device: [
                 None,
                 None,
@@ -103,6 +150,31 @@ impl Core {
                 None,
                 None,
                 None,
+            ],
+            txn_fn: None,
+            audit_fn: None,
+            audit_err: None,
+        }
+    }
+}
+
+impl<S: QuadStorage> Core<S> {
+    // Construct a `Core` on top of a caller-supplied storage backend.
+    // Equivalent to `new()` but accepts any `QuadStorage` implementation.
+    pub fn with_storage(storage: S) -> Self {
+        Core {
+            quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
+            storage,
+            rom_top: Any::rom(ROM_BASE_OFS),
+            gc_addr: Any::ram(RAM_BASE_OFS),
+            gc_stride: 32,
+            gc_phase: GcPhase::Idle,
+            gc_curr: GcColor::GenX,
+            gc_prev: GcColor::GenY,
+            device: [
+                None, None, None, None,
+                None, None, None, None,
+                None, None, None, None,
             ],
             txn_fn: None,
             audit_fn: None,
@@ -134,29 +206,29 @@ impl Core {
         /*
          * Random-Access Memory (RAM) image (read/write + GC)
          */
-        self.quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(RAM_BASE_OFS), NIL, ZERO, NIL);
-        self.quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
-        self.quad_ram[DEBUG_DEV.ofs()]   = Quad::actor_t(ZERO, NIL, UNDEF);    // debug device #0
-        self.quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
-        self.quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_2, NIL, UNDEF);  // timer device #2
-        self.quad_ram[IO_DEV.ofs()]      = Quad::actor_t(PLUS_3, NIL, UNDEF);  // i/o device #3
-        self.quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_4, NIL, UNDEF);  // blob device #4
-        self.quad_ram[RANDOM_DEV.ofs()]  = Quad::actor_t(PLUS_5, NIL, UNDEF);  // random device #5
-        self.quad_ram[RSVD_8_DEV.ofs()]  = Quad::actor_t(PLUS_6, NIL, UNDEF);  // --reserved-- device #6
-        self.quad_ram[RSVD_9_DEV.ofs()]  = Quad::actor_t(PLUS_7, NIL, UNDEF);  // --reserved-- device #7
-        self.quad_ram[RSVD_A_DEV.ofs()]  = Quad::actor_t(Any::fix(8), NIL, UNDEF);  // --reserved-- device #8
-        self.quad_ram[RSVD_B_DEV.ofs()]  = Quad::actor_t(Any::fix(9), NIL, UNDEF);  // --reserved-- device #9
-        self.quad_ram[RSVD_C_DEV.ofs()]  = Quad::actor_t(Any::fix(10), NIL, UNDEF);  // --reserved-- device #10
-        self.quad_ram[HOST_DEV.ofs()]    = Quad::actor_t(Any::fix(11), NIL, UNDEF);  // host extension device #11
-        self.quad_ram[QUOTA.ofs()]       = Quad::quota(
-                                            Any::fix(4096),
-                                            Any::fix(256),
-                                            Any::fix(8192));  // root sponsor quota
-        self.quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(QUOTA, UNDEF);  // root configuration sponsor
+        self.storage.set(MEMORY.ofs(),      Quad::memory_t(Any::ram(RAM_BASE_OFS), NIL, ZERO, NIL));
+        self.storage.set(DDEQUE.ofs(),      Quad::ddeque_t(NIL, NIL, NIL, NIL));  // no events, no continuations
+        self.storage.set(DEBUG_DEV.ofs(),   Quad::actor_t(ZERO, NIL, UNDEF));     // debug device #0
+        self.storage.set(CLOCK_DEV.ofs(),   Quad::actor_t(PLUS_1, NIL, UNDEF));   // clock device #1
+        self.storage.set(TIMER_DEV.ofs(),   Quad::actor_t(PLUS_2, NIL, UNDEF));   // timer device #2
+        self.storage.set(IO_DEV.ofs(),      Quad::actor_t(PLUS_3, NIL, UNDEF));   // i/o device #3
+        self.storage.set(BLOB_DEV.ofs(),    Quad::actor_t(PLUS_4, NIL, UNDEF));   // blob device #4
+        self.storage.set(RANDOM_DEV.ofs(),  Quad::actor_t(PLUS_5, NIL, UNDEF));   // random device #5
+        self.storage.set(RSVD_8_DEV.ofs(),  Quad::actor_t(PLUS_6, NIL, UNDEF));   // --reserved-- device #6
+        self.storage.set(RSVD_9_DEV.ofs(),  Quad::actor_t(PLUS_7, NIL, UNDEF));   // --reserved-- device #7
+        self.storage.set(RSVD_A_DEV.ofs(),  Quad::actor_t(Any::fix(8), NIL, UNDEF));  // --reserved-- device #8
+        self.storage.set(RSVD_B_DEV.ofs(),  Quad::actor_t(Any::fix(9), NIL, UNDEF));  // --reserved-- device #9
+        self.storage.set(RSVD_C_DEV.ofs(),  Quad::actor_t(Any::fix(10), NIL, UNDEF)); // --reserved-- device #10
+        self.storage.set(HOST_DEV.ofs(),    Quad::actor_t(Any::fix(11), NIL, UNDEF)); // host extension device #11
+        self.storage.set(QUOTA.ofs(),       Quad::quota(
+                                                Any::fix(4096),
+                                                Any::fix(256),
+                                                Any::fix(8192)));  // root sponsor quota
+        self.storage.set(SPONSOR.ofs(),     Quad::sponsor_t(QUOTA, UNDEF));  // root configuration sponsor
 
     }
 
-    pub fn install_device(&mut self, cap: Any, mut dev: Box<dyn Device>) {
+    pub fn install_device(&mut self, cap: Any, mut dev: Box<dyn Device<S>>) {
         if let Ok(id) = self.device_id(cap) {
             dev.init();
             self.device[id] = Some(dev);
@@ -1740,7 +1812,7 @@ impl Core {
             // expand top-of-memory
             let top = self.ram_top();
             let ofs = top.ofs() + 1;
-            if ofs > QUAD_RAM_MAX {
+            if ofs > self.storage.capacity() {
                 /*
                 self.gc_collect_all();  // FIXME! HOW DO WE ENSURE CONSISTENCY WHILE EXECUTING AN INSTRUCTION?
                 if let Some(m) = self.ram_free().fix_num() {
@@ -1786,7 +1858,7 @@ impl Core {
 
     pub fn gc_color(&self, ptr: Any) -> Any {  // report color to debugger
         if ptr.is_ram() {
-            let mark = self.gc_marks[ptr.ofs()];
+            let mark = self.storage.get_mark(ptr.ofs());
             Any::fix(mark as isize)
         } else {
             UNDEF  // no color
@@ -1802,7 +1874,7 @@ impl Core {
             panic!("invalid gc_load=${:08x}", raw)
         }
         let ofs = (raw & !MSK_RAW) as usize;
-        self.quad_ram[ofs]
+        *self.storage.get(ofs)
     }
     fn gc_store(&mut self, ptr: Any, quad: Quad) {  // store quad directly
         let raw = ptr.raw();
@@ -1810,7 +1882,7 @@ impl Core {
             panic!("invalid gc_store=${:08x}", raw)
         }
         let ofs = (raw & !MSK_RAW) as usize;
-        self.quad_ram[ofs] = quad;
+        self.storage.set(ofs, quad);
     }
 
     /*
@@ -1900,12 +1972,12 @@ impl Core {
     fn gc_get_color(&mut self, addr: Any) -> GcColor {
         // pre-condition: self.gc_valid(addr).is_some()
         let ofs = addr.ofs();
-        self.gc_marks[ofs]
+        self.storage.get_mark(ofs)
     }
     fn gc_set_color(&mut self, addr: Any, color: GcColor) {
         // pre-condition: self.gc_valid(addr).is_some()
         let ofs = addr.ofs();
-        self.gc_marks[ofs] = color;
+        self.storage.set_mark(ofs, color);
     }
     fn gc_valid(&self, addr: Any) -> Option<Any> {
         if addr.is_cap() {
@@ -1969,7 +2041,7 @@ impl Core {
         if ptr.is_rom() {
             &self.quad_rom[ofs]
         } else {
-            &self.quad_ram[ofs]
+            self.storage.get(ofs)
         }
     }
 
@@ -2006,7 +2078,7 @@ impl Core {
             panic!("invalid RAM ptr=${:08x}", fwd.raw());
         }
         let ofs = fwd.ofs();
-        &self.quad_ram[ofs]
+        self.storage.get(ofs)
     }
     pub fn ram_mut(&mut self, ptr: Any) -> &mut Quad {
         let fwd = self.follow_fwd(ptr).unwrap();  // FIXME: report error?
@@ -2017,14 +2089,25 @@ impl Core {
         if ofs >= RAM_BASE_OFS {
             self.gc_mark_cell(fwd);  // mark cell in-use if it could be mutated
         }
-        &mut self.quad_ram[ofs]
+        self.storage.get_mut(ofs)
     }
 
     pub fn rom_buffer(&self) -> &[Quad] {
         &self.quad_rom
     }
+    // Returns a contiguous slice of RAM when the backing store supports it.
+    // The default `DenseQuadStorage` returns the full array; sparse or
+    // paged implementations may return an empty slice.
     pub fn ram_buffer(&self) -> &[Quad] {
-        &self.quad_ram
+        self.storage.as_slice()
+    }
+    // Direct access to the storage backend, for backend-specific inspection
+    // (e.g. iteration patterns that cannot be expressed through `ram()`).
+    pub fn storage(&self) -> &S {
+        &self.storage
+    }
+    pub fn storage_mut(&mut self) -> &mut S {
+        &mut self.storage
     }
 
     fn bitsr(&self, n: isize, nn: isize, carry: bool, rotate: bool) -> Any {
