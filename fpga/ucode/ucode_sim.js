@@ -219,6 +219,45 @@ function make_machine(prog = [], device = []) {
     }
     device[0xE] = make_sys();  // install system device
 
+    function make_blob() {
+        const BLOB_RADDR = 0x0;  // address to read
+        const BLOB_RDATA = 0x1;  // data last read
+        const BLOB_WADDR = 0x2;  // address to write
+        const BLOB_WDATA = 0x3;  // data to write
+
+        const BLOB_RAM_MAX = 0x4000;
+        const BLOB_ADDR_MASK = BLOB_RAM_MAX - 1;
+        const blob_ram = new Uint16Array(BLOB_RAM_MAX);
+
+        let raddr;
+        let waddr;
+
+        return Object.freeze({
+            read(reg) {
+                if (reg === BLOB_RDATA) {
+                    return blob_ram[raddr];
+                }
+                return 0;  // infallible read
+            },
+            write(reg, data) {
+                if (reg === BLOB_WDATA) {
+                    blob_ram[waddr] = data;
+                } else if (reg === BLOB_WADDR) {
+                    waddr = data & BLOB_ADDR_MASK;
+                } else if (reg === BLOB_RADDR) {
+                    raddr = data & BLOB_ADDR_MASK;
+                }
+                // ignore unknown writes
+            },
+            BLOB_RADDR,
+            BLOB_RDATA,
+            BLOB_WADDR,
+            BLOB_WDATA
+        });
+
+    }
+    device[0x2] = make_blob();  // install BLOB device
+
     function alu_perform(op, a, b) {
         if (import.meta.main) {
             trace("alu_perform:", "op=", op, "a=", a, "b=", b);

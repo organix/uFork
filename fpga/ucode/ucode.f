@@ -2619,45 +2619,61 @@ VARIABLE saved_sp           ( sp before instruction execution )
     report_rtc_ms
     EXIT
 
-(
-: b2c ( msb lsb -- cell )
-    8LSB&
-    SWAP 8LSB& 8ROL
-    OR ;
-: c2b ( cell -- msb lsb )
-    DUP 8ROL 8LSB&
-    SWAP 8LSB& ;
+: blob2b@ ( addr -- msb lsb addr )
+    DUP ASR                 ( D: baddr caddr )
+    0x20 IO!                ( D: baddr )
+    0x21 IO@                ( D: baddr cell )
+    c2b ROT ;               ( D: msb lsb baddr )
+: BLOB@ ( addr -- byte )
+    blob2b@                 ( D: msb lsb addr )
+    LSB& IF                 ( D: msb lsb )
+        SWAP                ( D: lsb msb )
+    THEN
+    DROP ;                  ( D: byte )
+: BLOB! ( byte addr -- )
+    DUP blob2b@             ( D: byte addr msb lsb addr )
+    LSB& IF                 ( D: byte addr msb lsb )
+        DROP                ( D: byte addr msb )
+        ROT                 ( D: addr msb lsb=byte )
+    ELSE                    ( D: byte addr msb lsb )
+        SWAP                ( D: byte addr lsb msb )
+        DROP                ( D: byte addr lsb )
+        ROT                 ( D: addr lsb byte )
+        SWAP                ( D: addr msb=byte lsb )
+    THEN                    ( D: addr msb lsb )
+    b2c                     ( D: addr cell )
+    SWAP ASR                ( D: cell caddr )
+    0x22 IO!                ( D: cell )
+    0x23 IO! ;              ( D: -- )
 
-: CS! ( bool -- )
-    0xF0 IO! ;              ( assert chip-select )
-: DO! ( byte -- )
-    0xF1 IO! ;              ( send data byte )
-: DR? ( -- bool )
-    0xF2 IO@ ;              ( data ready/done )
-: DI@ ( -- byte )
-    0xF3 IO@ ;              ( last byte received )
-: WAIT_DR ( -- )
-    BEGIN DR? UNTIL ;       ( wait until ready/done )
-
-: spi_out ( byte -- )
-    WAIT_DR DO! ;
-: spi_in ( -- byte )
-    -1 spi_out              ( send dummy byte )
-    WAIT_DR DI@ ;
-)
 : blob_test
     0x0000 0x22 IO!         ( WADDR! )
     0xA55A 0x23 IO!         ( WDATA! )
+    0x0001 0x22 IO!         ( WADDR! )
+    0x3CA5 0x23 IO!         ( WDATA! )
     0x3FFF 0x22 IO!         ( WADDR! )
-    0x5AA5 0x23 IO!         ( WDATA! )
+    0x4B1D 0x23 IO!         ( WDATA! )
     0x0000 0x20 IO!         ( RADDR! )
     0x21 IO@ X. SPACE       ( RDATA@ )
-    0x3FFF 0x20 IO!         ( RADDR! )
+    0x0001 0x20 IO!         ( RADDR! )
     0x21 IO@ X. SPACE       ( RDATA@ )
     0xC000 0x22 IO!         ( WADDR! )
     0xC0DE 0x23 IO!         ( WDATA! )
     0x0000 0x20 IO!         ( RADDR! )
     0x21 IO@ X. SPACE       ( RDATA@ )
+    ':' EMIT
+    0x95FA 0 BLOB!
+    0x42 3 BLOB!
+    0 4 ?LOOP-              ( D: addr ) ( R: I )
+        DUP BLOB@           ( D: addr byte ) ( R: I )
+        SPACE X.            ( D: addr ) ( R: I )
+        1+                  ( D: addr+1 ) ( R: I )
+    AGAIN
+    SPACE
+    -4 ?LOOP+               ( D: -- ) ( R: I )
+        I BLOB@             ( D: byte ) ( R: I )
+        SPACE X.            ( D: addr ) ( R: I )
+    AGAIN
     CR ;
 
 (   --- disable test suite ---
