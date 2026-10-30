@@ -2585,7 +2585,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     event_enqueue           ( D: -- )
     0 run_loop              ( run until idle or signal )
     root_spn spn_signal@
-    CR X. ( CR )            ( print signal )
+    ( CR X. ( CR )            ( print signal ) )
     ( #0 =assert )
 : ufork_run
     prompt MONITOR
