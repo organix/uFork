@@ -239,18 +239,16 @@ function upload(port, rom_bytes) {
 
 function boot(port) {
 
-// Run the uFork core until idle, producing an array of 16-bit raws representing
-// messages sent to the debug device.
+// Run the uFork core until idle, producing an array of strings representing
+// messages sent to the debug device, as printed by the device.
 
     return parseq.sequence([
         command(port, "\u0003"),  // ^C
         requestorize(function (bytes) {
             return new TextDecoder().decode(bytes).split(
                 "\r\n"
-            ).filter(function (part) {
-                return part.length > 0;
-            }).map(function (part) {
-                return parseInt(part, 16);
+            ).filter(function (line) {
+                return line.length > 0;
             });
         })
     ]);
