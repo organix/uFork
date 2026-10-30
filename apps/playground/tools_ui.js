@@ -31,6 +31,7 @@ import fomu from "./fomu.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const rx_extension = /\.\w+$/;
+const rx_fomu_raw = /([#@\^])([0-9A-F]{4})/g;
 const resource_error_codes = Object.freeze([
     ufork.E_MEM_LIM,
     ufork.E_MSG_LIM,
@@ -47,6 +48,26 @@ function request_and_open_serial_port() {
                 return port;
             })
         );
+    });
+}
+
+function format_fomu_debug(line) {
+
+// The Fomu prints each 16-bit raw as 4 hex digits, prefixed by "#" for
+// fixnums, "@" for capabilities, and "^" for other pointers. Reformat them as
+// 'ufork.print' would, leaving any surrounding punctuation intact.
+
+    return line.replace(rx_fomu_raw, function (_, prefix, hex) {
+        const word = parseInt(hex, 16);
+        if (prefix === "#") {
+            const fix15 = word - 0x8000;
+            return ufork.print(ufork.fixnum(
+                fix15 < 0x4000
+                ? fix15
+                : fix15 - 0x8000  // negative
+            ));
+        }
+        return ufork.print(ufork.from_word16(word));
     });
 }
 
@@ -301,12 +322,12 @@ const tools_ui = make_ui("tools-ui", function (element, {
                     fomu.boot(port)
                 ]);
             })
-        ])(function (raws, reason) {
-            if (raws === undefined) {
+        ])(function (lines, reason) {
+            if (lines === undefined) {
                 warn(reason);
             } else {
-                raws.forEach(function (raw) {
-                    devices.io.debug(ufork.print(ufork.from_word16(raw)));
+                lines.forEach(function (line) {
+                    devices.io.debug(format_fomu_debug(line));
                 });
                 devices.io.info("Fomu idle.");
             }
