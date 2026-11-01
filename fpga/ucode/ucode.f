@@ -2264,6 +2264,65 @@ del_none:                   ; k orig key rev next value' key'
     PRNG@                   ( D: spn cust msg=prng )
     post_fix ;
 
+: blob2b@ ( addr -- msb lsb addr )
+    DUP ASR                 ( D: baddr caddr )
+    0x20 IO!                ( D: baddr )
+    0x21 IO@                ( D: baddr cell )
+    c2b ROT ;               ( D: msb lsb baddr )
+: BLOB@ ( addr -- byte )
+    blob2b@                 ( D: msb lsb addr )
+    LSB& IF                 ( D: msb lsb )
+        SWAP                ( D: lsb msb )
+    THEN
+    DROP ;                  ( D: byte )
+: BLOB! ( byte addr -- )
+    DUP blob2b@             ( D: byte addr msb lsb addr )
+    LSB& IF                 ( D: byte addr msb lsb )
+        DROP                ( D: byte addr msb )
+        ROT                 ( D: addr msb lsb=byte )
+    ELSE                    ( D: byte addr msb lsb )
+        SWAP                ( D: byte addr lsb msb )
+        DROP                ( D: byte addr lsb )
+        ROT                 ( D: addr lsb byte )
+        SWAP                ( D: addr msb=byte lsb )
+    THEN                    ( D: addr msb lsb )
+    b2c                     ( D: addr cell )
+    SWAP ASR                ( D: cell caddr )
+    0x22 IO!                ( D: cell )
+    0x23 IO! ;              ( D: -- )
+: blob_dev                  ( event -- )
+    DUP QY@                 ( D: event message )
+    DUP is_pair IF          ( D: event message )
+        part                ( D: event rest first )
+        OVER is_pair IF     ( D: event #offset,#value cust )
+            ( write request )
+            SWAP part       ( D: event cust #value #offset )
+            SWAP fix2int    ( D: event cust #offset value )
+            SWAP fix2int    ( D: event cust value offset )
+            ( TODO: offset bounds-check )
+            BLOB!           ( D: event cust )
+            OVER QX!        ( D: event )
+            #t OVER QY!     ( D: event )
+            event_enqueue ;
+        THEN                ( D: event #offset cust )
+        SWAP fix2int        ( D: event cust offset )
+        DUP 0x0FFF > IF     ( D: event cust size )
+            ( alloc request )
+            DROP OVER       ( D: event cust event )
+            DUP QX@         ( D: event cust event SELF )
+            SWAP QY!        ( D: event cust )
+            OVER QX!        ( D: event )
+            event_enqueue ;
+        THEN                ( D: event cust offset )
+        ( read request )
+        BLOB@ int2fix       ( D: event cust #byte )
+        ROT                 ( D: cust #byte event )
+        TUCK QY!            ( D: cust event )
+        TUCK QX!            ( D: event )
+        event_enqueue ;
+    THEN                    ( D: event message )
+    DROP release ;
+
 : log_event                 ( -- )
     '[' EMIT SPACE e_head@ events. ']' EMIT CR
     10 ms_delay ;
@@ -2282,7 +2341,7 @@ del_none:                   ; k orig key rev next value' key'
     OVER QX@ cap2ptr        ( D: event sponsor target )
     DUP QZ@ IF              ( D: event sponsor target )
         ( target is busy )
-        SWAP DROP           ( D: event target )
+        NIP                 ( D: event target )
         zq_put ;            ( D: -- )
     THEN DROP               ( D: event sponsor )
 
@@ -2308,7 +2367,7 @@ del_none:                   ; k orig key rev next value' key'
         clock_dev           ( 1: clock device )
         bounds_abort        ( 2: timer device )
         bounds_abort        ( 3: i/o device )
-        bounds_abort        ( 4: blob device )
+        blob_dev            ( 4: blob device )
         prng_dev            ( 5: random device )
         1_bounds_abort ;    ( default case )
     THEN
@@ -2457,12 +2516,19 @@ VARIABLE saved_sp           ( sp before instruction execution )
     #actor_t 2alloc ptr2cap ( D: target=a_boot )
     DUP 0x6010 =assert      ( bootstrap actor at known address )
     #nil                    ( D: target caps={} )
+
     0x6007 0x8005           ( D: target caps value=random_dev key=+5 )
     #dict_t 3alloc          ( D: target caps={5:random_dev} )
+
+    0x6006 0x8004           ( D: target caps value=blob_dev key=+4 )
+    #dict_t 3alloc          ( D: target caps={4:blob_dev,...} )
+
     0x6003 0x8001           ( D: target caps value=clock_dev key=+1 )
-    #dict_t 3alloc          ( D: target caps={1:clock_dev,5:random_dev} )
+    #dict_t 3alloc          ( D: target caps={1:clock_dev,...} )
+
     0x6002 0x8000           ( D: target caps value=debug_dev key=+0 )
-    #dict_t 3alloc          ( D: target caps={0:debug_dev,1:clock_dev,5:random_dev} )
+    #dict_t 3alloc          ( D: target caps={0:debug_dev,...} )
+
     SWAP root_spn           ( D: msg=caps target spn )
     2alloc                  ( D: event )
     event_enqueue           ( D: -- )
@@ -2475,33 +2541,6 @@ VARIABLE saved_sp           ( sp before instruction execution )
 : ufork_run
     prompt MONITOR
     ufork_boot ;
-
-: blob2b@ ( addr -- msb lsb addr )
-    DUP ASR                 ( D: baddr caddr )
-    0x20 IO!                ( D: baddr )
-    0x21 IO@                ( D: baddr cell )
-    c2b ROT ;               ( D: msb lsb baddr )
-: BLOB@ ( addr -- byte )
-    blob2b@                 ( D: msb lsb addr )
-    LSB& IF                 ( D: msb lsb )
-        SWAP                ( D: lsb msb )
-    THEN
-    DROP ;                  ( D: byte )
-: BLOB! ( byte addr -- )
-    DUP blob2b@             ( D: byte addr msb lsb addr )
-    LSB& IF                 ( D: byte addr msb lsb )
-        DROP                ( D: byte addr msb )
-        ROT                 ( D: addr msb lsb=byte )
-    ELSE                    ( D: byte addr msb lsb )
-        SWAP                ( D: byte addr lsb msb )
-        DROP                ( D: byte addr lsb )
-        ROT                 ( D: addr lsb byte )
-        SWAP                ( D: addr msb=byte lsb )
-    THEN                    ( D: addr msb lsb )
-    b2c                     ( D: addr cell )
-    SWAP ASR                ( D: cell caddr )
-    0x22 IO!                ( D: cell )
-    0x23 IO! ;              ( D: -- )
 
 (   --- disable test suite ---
 : blob_test
