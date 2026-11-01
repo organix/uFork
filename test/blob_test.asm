@@ -140,7 +140,22 @@ blob_read:                  ; n,blob,{caps} <- ok
     dict get                ; offset cust=debug_dev
     pair 1                  ; cust,offset
     state 2                 ; cust,offset blob
-    ref send_msg
+    actor send              ; --
+
+    state 1                 ; n
+    push 0                  ; n 0
+    cmp gt                  ; n>0
+    if_not commit           ; --
+
+    state 0                 ; n,blob,{caps}
+    part 1                  ; blob,{caps} n
+    push 1                  ; blob,{caps} n 1
+    alu sub                 ; blob,{caps} n=n-1
+    pair 1                  ; n,blob,{caps}
+    push blob_read          ; n,blob,{caps} blob_read
+    actor become            ; --
+
+    ref resend
 
 ; shared tails from `std.asm`
 cust_send:                  ; msg
