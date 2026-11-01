@@ -61,6 +61,11 @@ self_send:                  ; msg
 
 abort:                      ; ...
     push #?                 ; ... reason=#?
+    ref reason_abort
+event_abort:                ; ...
+    msg 0                   ; msg
+    actor self              ; msg self
+    pair 1                  ; event=self,msg
 reason_abort:               ; reason
     end abort
 
@@ -145,6 +150,7 @@ return_one:                 ; k
     resend
     self_send
     abort
+    event_abort
     reason_abort
     stop
     rv_self
