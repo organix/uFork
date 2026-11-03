@@ -2243,15 +2243,12 @@ del_none:                   ; k orig key rev next value' key'
 : report_rtc_ms             ( -- )
     RTC_MS@ X. CR ;
 : clock_dev                 ( event -- )
-    DUP QT@                 ( D: event spn )
-    SWAP QY@                ( D: spn cust=message )
-    RTC_MS@                 ( D: spn cust msg=ms )
-: post_fix                  ( D: spn cust msg )
-    int2fix                 ( D: spn cust msg=#msg )
-    SWAP                    ( D: spn msg target=cust )
-: post_msg                  ( sponsor msg target -- )
-    ROT                     ( D: msg target sponsor )
-    2alloc                  ( D: event' )
+    RTC_MS@                 ( D: event n=rtc_ms )
+: reply_fix                 ( event n -- )
+    int2fix OVER            ( D: event msg=#n event )
+    DUP QY@                 ( D: event msg event cust=request )
+    SWAP QX!                ( D: event msg )
+    OVER QY!                ( D: event )
     event_enqueue ;
 
 : PRNG@                     ( -- prng )
@@ -2259,10 +2256,8 @@ del_none:                   ; k orig key rev next value' key'
 : report_prng               ( -- )
     PRNG@ X. CR ;
 : prng_dev                  ( event -- )
-    DUP QT@                 ( D: event spn )
-    SWAP QY@                ( D: spn cust=message )
-    PRNG@                   ( D: spn cust msg=prng )
-    post_fix ;
+    PRNG@                   ( D: event n=random )
+    reply_fix ;
 
 : blob2b@ ( addr -- msb lsb addr )
     DUP ASR                 ( D: baddr caddr )
