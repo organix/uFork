@@ -889,10 +889,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : gc_phase_1 ( -- )
     gc_gen_swap
     mem_root@ gc_scan
-    e_head@ gc_scan
-    k_head@ gc_scan
-    root_spn gc_scan
-    ram_base gc_scan_ptr !  ( start after reserved RAM )
+    ek_queues gc_scan_ptr !  ( start after memory descriptor )
     2 gc_phase ! ;
 
 : gc_phase_2 ( -- )
@@ -2318,6 +2315,62 @@ del_none:                   ; k orig key rev next value' key'
     THEN                    ( D: event message )
     DROP release ;
 
+0x4004 CONSTANT timer_root  ( cap2ptr(timer_dev) )
+: timer_ins                 ( D: prev next ) ( R: entry )
+    R>                      ( D: prev next entry )
+    TUCK qy!                ( D: prev entry )
+    SWAP qy! ;              ( D: -- )
+: timer_add                 ( entry -- )
+    >R timer_root           ( D: prev=timer_root ) ( R: entry )
+    BEGIN                   ( D: prev ) ( R: entry )
+        DUP QY@             ( D: prev next ) ( R: entry )
+        DUP is_ram          ( D: prev next is_ram(next) ) ( R: entry )
+    WHILE                   ( D: prev next ) ( R: entry )
+        DUP QX@             ( D: prev next t0 ) ( R: entry )
+        R@ QX@ -            ( D: prev next t0-t1 ) ( R: entry )
+        MSB& IF             ( D: prev next ) ( R: entry )
+            NIP             ( D: prev=next ) ( R: entry )
+        ELSE                ( D: prev next ) ( R: entry )
+            timer_ins ;
+        THEN                ( D: prev ) ( R: entry )
+    REPEAT                  ( D: prev next ) ( R: entry )
+    timer_ins ;
+: timer_dev                 ( event -- )
+    DUP QY@                 ( D: event message )
+    DUP is_pair IF          ( D: event message )
+        part fix2int        ( D: event evt delay )
+        ( TODO: could release `message` here? )
+        OVER is_pair IF     ( D: event evt delay )
+            RTC_MS@ +       ( D: event evt time=delay+now )
+            ROT             ( D: evt time entry=event )
+            TUCK QX!        ( D: evt entry )
+            TUCK QZ!        ( D: entry )
+            timer_add ;
+        THEN                ( D: event evt delay )
+        DROP                ( D: event evt )
+    THEN                    ( D: event message/evt )
+    DROP release ;
+: timer_poll                ( -- )
+    RTC_MS@                 ( D: now )
+    BEGIN                   ( D: now )
+        timer_root QY@      ( D: now curr )
+        DUP is_ram          ( D: now curr is_ram(curr) )
+    WHILE                   ( D: now curr )
+        2DUP QX@ -          ( D: now curr now-time )
+        MSB& IF             ( D: now curr )
+            2DROP ;
+        THEN                ( D: now curr )
+        DUP QY@             ( D: now curr next )
+        timer_root qy!      ( D: now curr )
+        DUP QZ@             ( D: now curr evt )
+        TUCK QX@            ( D: now evt curr to )
+        OVER qx!            ( D: now evt curr )
+        SWAP QY@            ( D: now curr msg )
+        OVER qy!            ( D: now curr )
+        event_enqueue       ( D: now )
+    REPEAT                  ( D: now curr )
+    2DROP ;
+
 : log_event                 ( -- )
     '[' EMIT SPACE e_head@ events. ']' EMIT CR
     10 ms_delay ;
@@ -2360,7 +2413,7 @@ del_none:                   ; k orig key rev next value' key'
         JMPTBL 6 ,
         debug_dev           ( 0: debug device )
         clock_dev           ( 1: clock device )
-        bounds_abort        ( 2: timer device )
+        timer_dev           ( 2: timer device )
         bounds_abort        ( 3: i/o device )
         blob_dev            ( 4: blob device )
         prng_dev            ( 5: random device )
@@ -2442,7 +2495,9 @@ VARIABLE saved_sp           ( sp before instruction execution )
         e_head@ is_ram IF
             dispatch_event
         ELSE
-            E_OK run_signal ;
+            timer_root QY@ is_rom IF
+                E_OK run_signal ;
+            THEN
         THEN
     THEN
     RESET                   ( clear both D-stack and R-stack )
@@ -2451,7 +2506,8 @@ VARIABLE saved_sp           ( sp before instruction execution )
             DROP run_exit ;
         THEN
     THEN                    ( D: limit )
-    ( gc_increment )
+    timer_poll
+    ( gc_increment ) ( ======== FIXME: re-enable GC! ======== )
     run_again ;
 
 : rom_init
@@ -2517,6 +2573,9 @@ VARIABLE saved_sp           ( sp before instruction execution )
 
     0x6006 0x8004           ( D: target caps value=blob_dev key=+4 )
     #dict_t 3alloc          ( D: target caps={4:blob_dev,...} )
+
+    0x6004 0x8002           ( D: target caps value=timer_dev key=+2 )
+    #dict_t 3alloc          ( D: target caps={2:timer_dev,...} )
 
     0x6003 0x8001           ( D: target caps value=clock_dev key=+1 )
     #dict_t 3alloc          ( D: target caps={1:clock_dev,...} )
