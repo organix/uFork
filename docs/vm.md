@@ -142,18 +142,18 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 -------------|--------------|-----------|-----------|-----------|------------------
  `^40000000` | _top_        | _next_    | _free_    | _root_    | Memory Descriptor
  `^40000001` | _e_head_     | _e_tail_  | _k_head_  | _k_tail_  | Events and Continuations
- `@60000002` | `#actor_t`   | `+0`      | `#nil`    | `#?`      | Device Actor #0
- `@60000003` | `#actor_t`   | `+1`      | `#nil`    | `#?`      | Device Actor #1
- `@60000004` | `#actor_t`   | `+2`      | `#nil`    | `#?`      | Device Actor #2
- `@60000005` | `#actor_t`   | `+3`      | `#nil`    | `#?`      | Device Actor #3
- `@60000006` | `#actor_t`   | `+4`      | `#nil`    | `#?`      | Device Actor #4
- `@60000007` | `#actor_t`   | `+5`      | `#nil`    | `#?`      | Device Actor #5
+ `@60000002` | `#actor_t`   | `+0`      | `#nil`    | `#?`      | Device Actor #0 (debug)
+ `@60000003` | `#actor_t`   | `+1`      | `#nil`    | `#?`      | Device Actor #1 (clock)
+ `@60000004` | `#actor_t`   | `+2`      | `#nil`    | `#?`      | Device Actor #2 (timer)
+ `@60000005` | `#actor_t`   | `+3`      | `#nil`    | `#?`      | Device Actor #3 (i/o)
+ `@60000006` | `#actor_t`   | `+4`      | `#nil`    | `#?`      | Device Actor #4 (blob)
+ `@60000007` | `#actor_t`   | `+5`      | `#nil`    | `#?`      | Device Actor #5 (random)
  `@60000008` | `#actor_t`   | `+6`      | `#nil`    | `#?`      | Device Actor #6
  `@60000009` | `#actor_t`   | `+7`      | `#nil`    | `#?`      | Device Actor #7
  `@6000000A` | `#actor_t`   | `+8`      | `#nil`    | `#?`      | Device Actor #8
  `@6000000B` | `#actor_t`   | `+9`      | `#nil`    | `#?`      | Device Actor #9
  `@6000000C` | `#actor_t`   | `+10`     | `#nil`    | `#?`      | Device Actor #10
- `@6000000D` | `#actor_t`   | `+11`     | `#nil`    | `#?`      | Device Actor #11
+ `@6000000D` | `#actor_t`   | `+11`     | `#nil`    | `#?`      | Device Actor #11 (host)
  `^4000000E` | _memory_     | _events_  | _cycles_  | `#?`      | Root Quota
  `^4000000F` | `#sponsor_t` | _quota_   | _signal_  | _waiting_ | Root Sponsor
 

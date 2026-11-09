@@ -1,5 +1,5 @@
 ;
-; Test uFork/FPGA timer and BLOB devices
+; Test uFork/FPGA BLOB device
 ;
 
 debug_key:                  ; from `dev.asm`
@@ -25,10 +25,7 @@ boot:                       ; _ <- {caps}
     dict get                ; debug_dev clock_dev
     actor send              ; --
 
-;    if_not commit           ; end demo
-    if_not blob_demo        ; blob demo
-;    if_not timer_demo       ; timer demo
-    ref event_abort
+;    if_not commit           ; end demo early
 
 blob_demo:                  ; _ <- {caps}
     ; allocate blob
