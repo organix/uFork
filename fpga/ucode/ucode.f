@@ -835,11 +835,14 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : gc_set_color ( qref color -- )
     SWAP GCC! ;
 
-: gc_init ( -- )
-    ( loop to set reserved RAM to gc_free_color )
-    gc_free_color 16 ?LOOP-
+: gc_set_rsvd ( color -- )
+    16 ?LOOP-
         DUP I GCC!
     AGAIN DROP
+    gc_free_color 0 GCC! ;
+
+: gc_init ( -- )
+    gc_genx_color gc_set_rsvd
     gc_genx_color gc_curr_gen !
     gc_geny_color gc_prev_gen ! ;
 
@@ -888,6 +891,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 
 : gc_phase_1 ( -- )
     gc_gen_swap
+    gc_scan_color gc_set_rsvd
     mem_root@ gc_scan
     ek_queues gc_scan_ptr !  ( start after memory descriptor )
     2 gc_phase ! ;
@@ -2507,7 +2511,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
         THEN
     THEN                    ( D: limit )
     timer_poll
-    ( gc_increment ) ( ======== FIXME: re-enable GC! ======== )
+    gc_increment
     run_again ;
 
 : rom_init
