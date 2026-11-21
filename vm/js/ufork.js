@@ -347,12 +347,18 @@ function in_mem(ptr) {
 }
 
 function to_word16(word32) {
+    if (is_fix(word32)) {
+        return 0x8000 | (word32 & 0x7FFF);  // 15-bit fixnum
+    }
     const lsb13 = (word32 >> 0) & 0x1FFF;
     const msb3 = (word32 >> 16) & 0xE000;
     return (msb3 | lsb13);
 }
 
 function from_word16(word16) {
+    if ((word16 & 0x8000) !== 0) {
+        return fixnum((word16 << 17) >> 17);  // sign-extend 15-bit fixnum
+    }
     const lsb13 = (word16 >> 0) & 0x1FFF;
     const msb3 = word16 & 0xE000;
     return ((msb3 << 16) | lsb13) >>> 0;
@@ -362,6 +368,7 @@ function test_word16() {
     if (
         to_word16(0x60000ABC) !== 0x6ABC
         || from_word16(0x6ABC) !== 0x60000ABC
+        || fix_to_i32(from_word16(0xFFFE)) !== -2
         || to_word16(from_word16(0x802A)) !== 0x802A
         || from_word16(to_word16(0x8000002A)) !== 0x8000002A
     ) {

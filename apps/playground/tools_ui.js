@@ -31,7 +31,7 @@ import fomu from "./fomu.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const rx_extension = /\.\w+$/;
-const rx_fomu_raw = /([#@\^])([0-9A-F]{4})/g;
+const rx_fomu_raw = /[#@\^]([0-9A-F]{4})/g;
 const resource_error_codes = Object.freeze([
     ufork.E_MEM_LIM,
     ufork.E_MSG_LIM,
@@ -57,17 +57,8 @@ function format_fomu_debug(line) {
 // fixnums, "@" for capabilities, and "^" for other pointers. Reformat them as
 // 'ufork.print' would, leaving any surrounding punctuation intact.
 
-    return line.replace(rx_fomu_raw, function (_, prefix, hex) {
-        const word = parseInt(hex, 16);
-        if (prefix === "#") {
-            const fix15 = word - 0x8000;
-            return ufork.print(ufork.fixnum(
-                fix15 < 0x4000
-                ? fix15
-                : fix15 - 0x8000  // negative
-            ));
-        }
-        return ufork.print(ufork.from_word16(word));
+    return line.replace(rx_fomu_raw, function (_, hex) {
+        return ufork.print(ufork.from_word16(parseInt(hex, 16)));
     });
 }
 
