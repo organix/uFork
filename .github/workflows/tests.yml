@@ -1,0 +1,28 @@
+name: tests
+on:
+  workflow_call:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: davidB/rust-cargo-make@v1
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/git
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: cargo test
+        working-directory: ./vm/rs
